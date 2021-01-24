@@ -38,6 +38,22 @@ int calibracion_encoders[4] ;
  * calibracion_encoders[3] : segundo valor lectura encoders -- lectura altura
 */
 
+char estado_autocalibracion[2] = {0,0} ;  // esta variable se usa para scheduler en calibracion  
+/*
+ * estado_autocalibracion[0] --> motor azimuth 
+ *                           --> 1 ---> primer sentido 
+ *                           --> 2 ---> segundo sentido 
+ *                           --> 0 ---> fin calibracion eje azimuth 
+ * estado_autocalibracion[1] --> motor de altura 
+ *                           --> 1 ---> primer sentido 
+ *                           --> 2 ---> segundo sentido 
+ *                           --> 0 ---> fin calibracion eje azimuth 
+ * 
+ * 
+*/                           
+ 
+
+
 enum _state_antena   
 {
     AUTOCAL ,  
@@ -63,13 +79,22 @@ void init_pins_motores()
 
 void autocalibracion()
 {
+    
     assign_value_autocal() ;
+    Serial.println("init_autocalibracion") ; 
     #if TIMER_CLOCKS 
         //using a scheduler function -- 
         // not using delayu 
     #else 
         delay(1000) ; 
         function_compare_autocalibracion() ; 
+        while (estado_autocalibracion[0]!=0 || estado_autocalibracion[1]!= 0)
+        {
+            delay(1000) ;     
+            function_compare_autocalibracion() ;             
+        }
+        Serial.println("fin autocalibracion") ; 
+
     #endif 
 }
 
@@ -137,6 +162,8 @@ void assign_value_autocal()
     leer_encoders() ; 
     ult4ad[0] = azimuth ; 
     ult4ad[2] = altura  ; 
+    estado_autocalibracion[0] = 1 ; 
+    estado_autocalibracion[1] = 1 ; 
     mover_antena(MOTOR_AZ,PRIMER_SENTIDO_CAL_AZ); 
     mover_antena(MOTOR_H,PRIMER_SENTIDO_CAL_H); 
      
@@ -147,23 +174,81 @@ void function_compare_autocalibracion()
     leer_encoders() ; 
     ult4ad[1] = azimuth ; 
     ult4ad[3] = altura  ;
+    char flags_status ='x';   // x indica que no entro por ningun estado de los dos --   
+    if (abs(ult4ad[0]-ult4ad[1])<10)   //diferencia de |0.025|mv 
+    {
+        Serial.println("flag = 1 ") ; 
+        flags_status = 1; 
+        
+        //estado_autocalibracion[0] = 2 ; 
+        //mover_antena(MOTOR_AZ,SEGUNDO_SENTIDO_CAL_AZ) ; 
+    }
+    if (abs(ult4ad[2]-ult4ad[3])<10)   //diferencia de |0.025|mv 
+    {  
+       Serial.println("flag = 2 ") ;  
+       flags_status = 2; 
+       //estado_autocalibracion[1] = 2 ; 
+      // mover_antena(MOTOR_H,SEGUNDO_SENTIDO_CAL_AZ) ; 
+    }
+    //flags_status =  ((abs(ult4ad[0]-ult4ad[1])<10) && (abs(ult4ad[2]-ult4ad[3])<10))?3:flags_status ; 
+    Serial.print("val AD: ") ; Serial.print(ult4ad[0]) ; Serial.print(" ") ; 
+    Serial.print(ult4ad[1]) ; Serial.print(" ") ; 
+    Serial.print(ult4ad[2]) ; Serial.print(" ") ; 
+    Serial.print(ult4ad[3]) ; Serial.println(" ") ; 
 
-    char flag = 'x' ; 
-    if ( abs(ult4ad[0]-ult4ad[1])<15)
+    Serial.print("cal_encoders: ") ; Serial.print(calibracion_encoders[0]) ; Serial.print("  ") ; 
+    Serial.println(calibracion_encoders[2]) ; 
+
+    ult4ad[0] = ult4ad[1] ; 
+    ult4ad[2] = ult4ad[3] ; 
+   
+    switch (flags_status)
     {
-        mover_antena(MOTOR_AZ,SEGUNDO_SENTIDO_CAL_AZ) ; 
-        Serial.println("f1"); 
-    }
-    if (abs(ult4ad[2]-ult4ad[3])<15)
-    {
-       Serial.println("f2");
-       mover_antena(MOTOR_H,SEGUNDO_SENTIDO_CAL_AZ) ; 
-    }
-    if (flag=='x')
-    {
-        ult4ad[0] = ult4ad[1] ; 
-        ult4ad[2] = ult4ad[3] ; 
-    }
+     case 1:
+        Serial.println("case 1") ; 
+        if(estado_autocalibracion[0]==1)
+        {
+            calibracion_encoders[0] = ult4ad[0] ; 
+            estado_autocalibracion[0]=2 ; 
+            mover_antena(MOTOR_AZ,SEGUNDO_SENTIDO_CAL_AZ) ;
+
+        }else if(abs(calibracion_encoders[0]-ult4ad[0])>500)
+        {
+
+            estado_autocalibracion[0]=0 ; 
+            mover_antena(MOTOR_AZ,0) ; 
+        }
+        break ; 
+    case 2:
+        Serial.println("case 2") ; 
+        if(estado_autocalibracion[1]==1)
+        {
+            calibracion_encoders[2] = ult4ad[2] ; 
+            estado_autocalibracion[1] = 2 ; 
+            mover_antena(MOTOR_H,SEGUNDO_SENTIDO_CAL_AZ) ; 
+        }else if(abs(calibracion_encoders[2]-ult4ad[2])>500)
+        {
+            estado_autocalibracion[1] = 0 ; 
+            mover_antena(MOTOR_H,0) ; 
+        } 
+        break ; 
+    /*case 3: 
+        Serial.println("case 3") ; 
+        if (estado_autocalibracion[0] == 1 && estado_autocalibracion[1] == 1)
+        {
+            estado_autocalibracion[0] = 2 ; estado_autocalibracion[1] = 2 ; 
+            mover_antena(MOTOR_H,SEGUNDO_SENTIDO_CAL_AZ) ;  
+            mover_antena(MOTOR_AZ,SEGUNDO_SENTIDO_CAL_AZ) ;
+
+        }else if (estado_autocalibracion[0] == 2 && estado_autocalibracion[1] == 2)
+        {
+            estado_autocalibracion[0] = 0 ; estado_autocalibracion[1] = 0; 
+            mover_antena(MOTOR_H,0) ; 
+            mover_antena(MOTOR_AZ,0) ;
+        }
+        break ; */  
+    } 
+    
 
 
 } 

@@ -18,6 +18,7 @@ void leer_encoders()
     altura  = analogRead(PINENCODERH) ; 
     if (antena==AUTOCAL) 
     {
+      Serial.println("return_autocal") ; 
       return  ; 
     }
     //transformacion de coordenadax 
