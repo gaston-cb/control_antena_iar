@@ -5,15 +5,18 @@
 
 void setup() 
 {
+
+  // debugger -- 
+    Serial.begin(9600) ; 
+
+ //  pinMode(10,OUTPUT) ; 
+ //  digitalWrite(10,HIGH) ; 
+  // inicio scheduler -- > 
+
+
   /**** inicializacion de puertos del motor como salida  *****/
-  //pinMode(MOTOR_1_S1,OUTPUT) ; 
-  //pinMode(MOTOR_1_S2,OUTPUT) ;
-  //pinMode(MOTOR_2_S1,OUTPUT) ;
- // pinMode(MOTOR_2_S2,OUTPUT) ;
-  //autocalibracion() ; 
-  // calibracion de antena 
   init_pins_motores() ; 
-  autocalibracion()  ; //; -- se mantiene en 
+  autocalibracion()  ;
 
   // inicializacion de ethernet 
 

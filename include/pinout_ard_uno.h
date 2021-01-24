@@ -17,5 +17,5 @@
 #define PINENCODERH  A1   //MEDIDA DE ALTURA 
 
 // flags para utilizar depuracioon 
-#define TIMER_CLOCKS // para depurar las aplicaciones sin timers establecidos  
-#define DEBUG        // depuración de aplicaciones usando puerto serie .  
+#define TIMER_CLOCKS 0 // para depurar las aplicaciones sin timers establecidos  
+#define DEBUG  1      // depuración de aplicaciones usando puerto serie .  
