@@ -2,11 +2,11 @@
 /**** PINES PARA EL CONTROL DE LOS MOTORES  ***/
 
 // motor de cenit 
-#define MOTOR_1_S1  9
-#define MOTOR_1_S2  10
+#define MOTOR_1_S1  5
+#define MOTOR_1_S2  6
 // motor de azimuth 
-#define MOTOR_2_S1  5 
-#define MOTOR_2_S2  6 
+#define MOTOR_2_S1  9 
+#define MOTOR_2_S2  10 
 
 /* PINES ETHERNET */
 #define PINSS 4

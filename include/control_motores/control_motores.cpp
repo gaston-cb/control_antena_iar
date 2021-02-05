@@ -9,13 +9,14 @@
 #define SEGUNDO_SENTIDO_CAL_AZ 2  
 #define PRIMER_SENTIDO_CAL_H 1  
 #define SEGUNDO_SENTIDO_CAL_H 2  
-
+#define STOP_MOTOR_1_2 0 
 
 //------------------------ funciones locales en este archivo----------------------------//  
 
 void mover_antena(char _sentido_giro_az, char _sentido_giro_h) ; 
 void assign_value_autocal() ; 
 void function_compare_autocalibracion() ; 
+void assignar_sentidos_motores() ; 
 
 
 //--------------------------------------------------------------------------------------// 
@@ -54,6 +55,23 @@ char estado_autocalibracion[2] = {0,0} ;  // esta variable se usa para scheduler
  * 
 */                           
  
+char movimiento_motor_1[2] ; 
+/*
+ * motor de azimut 
+ * movimiento_motor_1[0]: sentido  oeste - este 
+ * movimiento_motor_1[1]: sentido  este  - oeste 
+*/
+char movimiento_motor_2[2] ; 
+/*
+ * motor de altura 
+ * movimiento_motor_2[0]: sentido   
+ * movimiento_motor_2[1]: sentido 
+*/
+
+int resH  ; 
+int resAz  ; 
+
+
 
 
 enum _state_antena   
@@ -91,23 +109,25 @@ void init_pins_motores()
 
 void autocalibracion()
 {
-    Serial.print("tam_str: ") ; Serial.println(sizeof(min_max)); 
     assign_value_autocal() ;
-    Serial.println("init_autocalibracion") ; 
-    #if TIMER_CLOCKS 
-        //using a scheduler function -- 
-        // not using delayu 
-    #else 
-        delay(1000) ; 
-        function_compare_autocalibracion() ; 
-        while (estado_autocalibracion[0]!=0 || estado_autocalibracion[1]!= 0)
-        {
+    delay(1000) ; 
+    function_compare_autocalibracion() ; 
+    while (estado_autocalibracion[0]!=0 || estado_autocalibracion[1]!= 0)
+    {
             delay(1000) ;     
             function_compare_autocalibracion() ;             
-        }
-        Serial.println("fin autocalibracion") ; 
+    }
+    //ASIGNACIÓN DE MOTORES 
+    assignar_sentidos_motores() ; 
+    antena = NO_AUTOCAL ; 
+    #if DEBUG==1
+    // depuración por puerto serie . 
+        Serial.print("calibracion encoders az: ") ; Serial.print(calibracion_encoders[0]);Serial.print(" ");  Serial.println(calibracion_encoders[1]) ;
+        Serial.print("calibracion encoders h: ") ; Serial.print(calibracion_encoders[2]);Serial.print(" "); Serial.println(calibracion_encoders[3]) ;
+        Serial.print("movimiento_motor_1: ") ; Serial.print(movimiento_motor_1[0],DEC) ;Serial.print(" ");  Serial.println(movimiento_motor_1[1],DEC) ; 
+        Serial.print("movimiento_motor_2: ") ; Serial.print(movimiento_motor_2[0],DEC) ; Serial.print(" "); Serial.print(movimiento_motor_2[1],DEC) ; 
+    #endif    
 
-    #endif 
 }
 
 
@@ -187,6 +207,8 @@ void function_compare_autocalibracion()
     leer_encoders() ; 
     ult4ad[1] = azimuth ; 
     ult4ad[3] = altura  ;
+    
+    
     char flags_status = 'x' ;  
     //motor az ;  motor altura -- flag = 0x33 ambos en estado estacionario 
     //flags que sirven para avisar que se llego a un estado limite dentro de 
@@ -198,13 +220,12 @@ void function_compare_autocalibracion()
     {
         min_max.min_az = (abs(ult4ad[0]-ult4ad[1])<10)?1:0 ;  
         flags_status = (min_max.min_az==1)?1:'x';  
-        Serial.print("ad<100") ; Serial.print("flags_status = ") ; Serial.println(flags_status,DEC) ;  
+
     }else if(ult4ad[1]>800 && min_max.max_az == 0 )
     {
         //min_max.max_az = 1 ; 
         min_max.max_az = (abs(ult4ad[0]-ult4ad[1])<10)?1:0 ; 
         flags_status = (min_max.max_az==1)?1:'x'; 
-        Serial.print("ad>800") ;  Serial.print("flags_status = ") ; Serial.println(flags_status,DEC) ; 
     } 
 
 
@@ -221,7 +242,6 @@ void function_compare_autocalibracion()
         {
            flags_status = (min_max.min_h==1) ?2:'x';  
         }
-        Serial.print("ad1<100") ; Serial.print("flags_status = ") ; Serial.println(flags_status,DEC) ;  
     }else if(ult4ad[3]>800 && min_max.max_h == 0)
     {
         min_max.max_h = (abs(ult4ad[3]-ult4ad[2])<10)?1:0 ;  
@@ -232,8 +252,6 @@ void function_compare_autocalibracion()
         {
            flags_status = (min_max.max_h==1) ?2:'x';  
         }        
-        Serial.print("ad1>800") ; Serial.print("flags_status = ") ; Serial.println(flags_status,DEC) ;  
-        Serial.print("valAD: ") ; Serial.print(ult4ad[2]) ; Serial.println(ult4ad[3]) ; 
     }
 
     ult4ad[0] = ult4ad[1] ; 
@@ -251,7 +269,7 @@ void function_compare_autocalibracion()
         {
             calibracion_encoders[1] = ult4ad[0] ; 
             estado_autocalibracion[0]=0 ; 
-            mover_antena(MOTOR_AZ,0) ; 
+            mover_antena(MOTOR_AZ,STOP_MOTOR_1_2) ; 
         }
         break ; 
     case 2:
@@ -266,14 +284,14 @@ void function_compare_autocalibracion()
             calibracion_encoders[3] = ult4ad[2] ;
   //          Serial.print("est_cal = 2 ") ;
             estado_autocalibracion[1] = 0 ; 
-            mover_antena(MOTOR_H,0) ; 
+            mover_antena(MOTOR_H,STOP_MOTOR_1_2) ; 
         } 
         break ;
     case 0x33: 
         if (estado_autocalibracion[0]==1 && estado_autocalibracion[1]==1)
         {
             calibracion_encoders[0] = ult4ad[0] ; 
-            calibracion_encoders[1] = ult4ad[2] ; 
+            calibracion_encoders[2] = ult4ad[2] ; 
             estado_autocalibracion[0] = 2 ; 
             estado_autocalibracion[1] = 2 ; 
             mover_antena(MOTOR_AZ,SEGUNDO_SENTIDO_CAL_AZ) ; 
@@ -285,11 +303,102 @@ void function_compare_autocalibracion()
             calibracion_encoders[3] = ult4ad[2] ;     
             estado_autocalibracion[0] = 0 ; 
             estado_autocalibracion[1] = 0 ; 
-            mover_antena(MOTOR_AZ,0) ; 
-            mover_antena(MOTOR_H,0)   ; 
+            mover_antena(MOTOR_AZ,STOP_MOTOR_1_2) ; 
+            mover_antena(MOTOR_H,STOP_MOTOR_1_2)   ; 
         }
     } 
     
 
 
 } 
+
+
+void assignar_sentidos_motores()
+{
+    // motor de azimuth  (cal_enc[0]-->primer sentido )
+    /*
+     * calibracion_encoders[0] < calibracion_encoders[1] --> sentido = 1 --> sentido este - oeste  
+     * calibracion_encoders[0] > calibracion_encoders[1] --> sentido = 1 --> sentido oeste - oeste  
+     * 
+    */
+    int aux ; 
+    #if DEBUG==1
+        Serial.println("asig sent motor") ;  
+        Serial.print("calibracion encoders az: ") ; Serial.print(calibracion_encoders[0]);Serial.print(" ");  Serial.println(calibracion_encoders[1]) ;
+        Serial.print("calibracion encoders h: ") ; Serial.print(calibracion_encoders[2]);Serial.print(" "); Serial.println(calibracion_encoders[3]) ;         
+        Serial.println("end assig ") ; 
+    #endif
+    if(calibracion_encoders[0] < calibracion_encoders[1])
+    {
+      movimiento_motor_1[0] = SEGUNDO_SENTIDO_CAL_AZ ; 
+      movimiento_motor_1[1] = PRIMER_SENTIDO_CAL_AZ;
+      
+    }else 
+    {
+      movimiento_motor_1[0] = PRIMER_SENTIDO_CAL_AZ ; 
+      movimiento_motor_1[1] = SEGUNDO_SENTIDO_CAL_AZ;
+      
+      aux = calibracion_encoders[0]   ; 
+      calibracion_encoders[0] = calibracion_encoders[1] ; 
+      calibracion_encoders[1] = aux ;   
+    }
+
+    if(calibracion_encoders[2] < calibracion_encoders[3])
+    {
+      movimiento_motor_2[0] = PRIMER_SENTIDO_CAL_H; 
+      movimiento_motor_2[1] = SEGUNDO_SENTIDO_CAL_H; 
+    }else 
+    {
+
+      movimiento_motor_2[1] = PRIMER_SENTIDO_CAL_H; 
+      movimiento_motor_2[0] = SEGUNDO_SENTIDO_CAL_H; 
+      aux = calibracion_encoders[2]   ; 
+      calibracion_encoders[2] = calibracion_encoders[3] ; 
+      calibracion_encoders[3] = aux ;   
+    }
+    resH = abs((100*((90.0)/(calibracion_encoders[2] - calibracion_encoders[3])))); 
+    resAz = (100*((180.0 )/(calibracion_encoders[1]- calibracion_encoders[0]))); 
+
+
+
+}
+
+
+
+
+void control_motores(int ref_1,int ref_2)
+{
+    int error_h  = ref_2 - altura ; 
+    int error_az = ref_1 - azimuth  ; 
+    #if DEBUG == 1 
+    /*    Serial.print("resoluciónH: ") ; Serial.println(abs(resH)) ; 
+        Serial.print("resoluciónZ: ") ; Serial.println(resAz) ; 
+        Serial.print("error alt: ") ; Serial.println(error_h) ; 
+        Serial.print("error az: ") ; Serial.println(error_az) ;  */ 
+    #endif
+
+    // control ON - OFF azimut 
+    if(abs(error_az)<resAz)
+    {
+        mover_antena(MOTOR_AZ,STOP_MOTOR_1_2) ; 
+    }else if(error_az>resAz)
+    {
+        mover_antena(MOTOR_AZ,movimiento_motor_1[0]) ; 
+    }else if(error_az<-resAz)
+    {
+        mover_antena(MOTOR_AZ,movimiento_motor_1[1]) ; 
+    } 
+
+    // control ON - OFF altura
+    
+    if(abs(error_h)<resH)
+    {
+        mover_antena(MOTOR_H,STOP_MOTOR_1_2) ; 
+    }else if(error_h>resH)
+    {
+        mover_antena(MOTOR_H,movimiento_motor_2[0]) ;     
+    }else if(error_h<-resH)
+    { 
+        mover_antena(MOTOR_H,movimiento_motor_2[1]) ; 
+    } 
+}
