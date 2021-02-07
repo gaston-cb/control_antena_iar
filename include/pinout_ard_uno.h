@@ -18,4 +18,9 @@
 
 // flags para utilizar depuracioon 
 #define TIMER_CLOCKS 0 // para depurar las aplicaciones sin timers establecidos  
-#define DEBUG  1      // depuración de aplicaciones usando puerto serie .  
+#define DEBUG  2      // depuración de aplicaciones usando puerto serie .  
+
+// columnas - filas y direccion display LCD I2C 
+#define COLS_LCD 16 
+#define FILAS_LCD 2 
+#define ADRRESS_LCD_I2C 0x3F 

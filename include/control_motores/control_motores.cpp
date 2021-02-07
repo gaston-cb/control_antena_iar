@@ -371,10 +371,10 @@ void control_motores(int ref_1,int ref_2)
     int error_h  = ref_2 - altura ; 
     int error_az = ref_1 - azimuth  ; 
     #if DEBUG == 1 
-    /*    Serial.print("resoluciónH: ") ; Serial.println(abs(resH)) ; 
+        Serial.print("resoluciónH: ") ; Serial.println(abs(resH)) ; 
         Serial.print("resoluciónZ: ") ; Serial.println(resAz) ; 
         Serial.print("error alt: ") ; Serial.println(error_h) ; 
-        Serial.print("error az: ") ; Serial.println(error_az) ;  */ 
+        Serial.print("error az: ") ; Serial.println(error_az) ; 
     #endif
 
     // control ON - OFF azimut 
