@@ -17,6 +17,11 @@
   byte gateway [] ={127,0,0,0} ; 
   byte DNS [] ={127,0,0,0}     ; 
 #endif
+// prototipo de funciones 
+void Asignar_Azimuth_Declinacion(EthernetClient &ptr, String &cad_leida); 
+String az_dec_pos_actual();
+
+
 
 int ref1 = 9000 ; 
 int ref2 = 9000 ; 
@@ -72,7 +77,7 @@ void setup()
 void loop() 
 {
   timerEvent() ; 
-  EthernetClient cliente_gpr = Gpredict() ;
+  EthernetClient cliente_gpr = Gpredict.available() ;
   if (cliente_gpr)
   { 
     while (cliente_gpr.connected())
@@ -87,35 +92,39 @@ void loop()
         if (c == 'P')
         {
           
-           cliente.print("RPRT 0") ; // lectura correcta 
+           cliente_gpr.print("RPRT 0") ; // lectura correcta 
            Asignar_Azimuth_Declinacion(cliente_gpr,cadena) ;             
-           cliente.flush() ;// VACIADO DE BUFFER 
+           cliente_gpr.flush() ;// VACIADO DE BUFFER 
            cadena ="" ;   
         }else if (c == 'p')
         {      
           cadena = az_dec_pos_actual() ;       
+          Serial.print( "c= p "); Serial.println(cadena) ; 
           cliente_gpr.print(cadena);
           cliente_gpr.flush() ; 
           cadena ="" ;     
         }else if (c=='q' || c=='Q' )
         {                
-          cliente.flush() ; 
-          cliente.stop()  ;
+          cliente_gpr.flush() ; 
+          cliente_gpr.stop()  ;
           cadena ="" ; 
           break ;          
         }else if (c=='S')
         {
-          cliente.flush() ;  
-          cliente.stop() ;
+          cliente_gpr.flush() ;  
+          cliente_gpr.stop() ;
           cadena = "" ; 
         } 
      }
   }
-  cliente.stop() ; 
+  cliente_gpr.stop() ; 
   delay(10) ; 
+  ref1 = 9000 ; 
+  ref2 = 9000 ; 
  }
-}
+ 
 
+}
 
 
 
@@ -131,8 +140,8 @@ void Asignar_Azimuth_Declinacion(EthernetClient &ptr, String &cad_leida)
    * el caso
    * 
   */
-float azimuth = 0  ;
-float declinacion = 0  ;
+float az = 0  ;
+float alt = 0  ;
 ptr.read(); //espacio en blanco  
 while(ptr.available())
 { 
@@ -140,23 +149,21 @@ while(ptr.available())
    cad_leida+= c==','?'.':c;   
 }
 
-azimuth = (cad_leida.substring(0,cad_leida.indexOf(' '))).toFloat();
-declinacion = (cad_leida.substring(cad_leida.indexOf(' '))).toFloat(); 
-//conversion a valor entero 
-azimuth = int ((azimuth*1024)/360) ; 
-declinacion = int ((declinacion*1024)/90) ;  
-/*
-Serial.print("azimuth_entero: ") ; 
-Serial.println(gpredict_azimuth) ; 
-Serial.print("declinacion_entero: ") ; 
-Serial.println(gpredict_declinacion) ; 
-*/ 
 
+az = (cad_leida.substring(0,cad_leida.indexOf(' '))).toFloat();
+alt = (cad_leida.substring(cad_leida.indexOf(' '))).toFloat(); 
+
+
+
+//conversion a valor entero 
+ref1 =  27000 - (az*100) ; 
+ref2 =  (alt*100) ;  
 }
 
 
 String az_dec_pos_actual()
 {
+  Serial.print("azimuth: "); Serial.println(azimuth) ; 
 
-  return String(azimuth/100) + " " + String(altura/100)
+  return String(String(270.00 - azimuth/100.0) +'\n'+String(altura/100.0))+'\n' ; 
 }
