@@ -8,7 +8,15 @@
 #include <LiquidCrystal_I2C.h> 
 #define ETHERNET_IP_LOCAL 0 //0 -> IP POR DHCP 
 #define PORT_GPREDICT 4533 
-#define PORT_STELLARIUM 4533 
+#define PORT_STELLARIUM 10000
+#define NUMBER_CLOCK 0 
+#define HOUR_CLOCK  0 
+#define MINUTE_CLOCK  0 
+#define SEGUNDO_CLOCK  0 
+#define MILISECOND_CLOCK  10 
+
+
+
 
                             //1 -> ip ASIGNADA POR EL PROGRAMADADOR 
 #if ETHERNET_IP_LOCAL      //if  ETHERNET_IP_LOCAL ==1 
@@ -26,6 +34,9 @@ String az_dec_pos_actual();
 int ref1 = 9000 ; 
 int ref2 = 9000 ; 
 
+EthernetServer stellarium(PORT_STELLARIUM) ;
+unsigned long int RA12HS = 0x80000000  ; // 4bytes  
+long int DEC10 = 0x40000000  ; //4 bytes 
 
 EthernetServer Gpredict(PORT_GPREDICT) ; 
 LiquidCrystal_I2C lcd (ADRRESS_LCD_I2C,COLS_LCD,FILAS_LCD) ; 
@@ -40,14 +51,14 @@ void setup()
 {
 
   // debugger -- 
-    Serial.begin(9600) ; 
+  Serial.begin(9600) ; 
   /**** inicializacion de puertos del motor como salida  *****/
   init_pins_motores() ; 
   autocalibracion()  ;
   //inicializacion de LCD  
   lcd.init() ; 
-  //lcd.backlight() ; 
-  lcd.print("hola mundillo") ;
+  lcd.backlight() ; 
+  //lcd.print("hola mundillo") ;
   
   // inicializacion de ethernet 
   Ethernet.init(PINSS) ; 
@@ -63,26 +74,33 @@ void setup()
 #else 
   if (Ethernet.begin(mac) == 0)
   {
-    Serial.print(F("Fallo DHCP"));    
+    lcd.print(F("Fallo DHCP"));    
   }else 
   {
-    Serial.print(Ethernet.localIP());
+    lcd.print(Ethernet.localIP());
   }
 #endif
   // inicio scheduler -- > 
-  Base_tiempo() ; 
-  TimerStart(0,0,0,0,10) ; 
+ Base_tiempo() ; 
+TimerStart(NUMBER_CLOCK,HOUR_CLOCK,MINUTE_CLOCK,SEGUNDO_CLOCK,MILISECOND_CLOCK) ; 
 }
 
 void loop() 
 {
   timerEvent() ; 
   EthernetClient cliente_gpr = Gpredict.available() ;
+  EthernetClient cliente_s = stellarium.available() ; 
+  long int dec ; 
+  unsigned long int RA = 0 ; 
+  uint8_t sunP[20] ; // vector datos recibidos -- sunposition 
+  char state_con = 0 ; 
+  
+  
+  
   if (cliente_gpr)
   { 
     while (cliente_gpr.connected())
     { 
-      
       timerEvent() ;
       String cadena = "" ;      
       if (cliente_gpr.available())
@@ -99,7 +117,6 @@ void loop()
         }else if (c == 'p')
         {      
           cadena = az_dec_pos_actual() ;       
-          Serial.print( "c= p "); Serial.println(cadena) ; 
           cliente_gpr.print(cadena);
           cliente_gpr.flush() ; 
           cadena ="" ;     
@@ -122,7 +139,57 @@ void loop()
   ref1 = 9000 ; 
   ref2 = 9000 ; 
  }
+  
+ if (cliente_s)
+ {  
+   while (cliente_s.connected())
+   {
+    timerEvent() ; 
+    
+    char i = 0 ; 
+    while (cliente_s.available())
+    {
+      //Serial.println(cliente_s.read(),HEX) ; 
+      sunP[i] = cliente_s.read() ;  
+      i = i + 1 ;          
+      state_con = 1 ; 
+    }
+    if(state_con == 1)
+    {
+      dec = 0x00000000 | (long (sunP[19])<<24) | (long (sunP[18])<<16) | (long (sunP[17])<<8) | (long (sunP[16])<<0);
+      RA  = 0x00000000 | (long (sunP[15])<<24) | (long (sunP[14])<<16) | (long (sunP[13])<<8) | (long (sunP[12])<<0);
+      state_con = 0 ; 
+      // declinacion en angulo 
+      //ra en angulo 
+      // RA12HS -- 12hs 
+      unsigned long int hsra = (((RA*12.0)/RA12HS) * 10000)*15   ;
+      float hsrf  = ((RA*12.0)/RA12HS)*15 ;      
+      float declinacion = (90.0/DEC10)*dec ;  
+      
+      Serial.print("declinacion: ") ; Serial.println(declinacion) ; 
+      Serial.print("ascencion recta: ") ; Serial.println(hsrf) ; 
+      Serial.print("ascencion recta entera: ") ; Serial.println(hsra) ; 
+      cliente_s.write(sunP,20) ;   
+    }
+     
+   }
+   cliente_s.stop() ; 
+   delay(10) ; 
+   // change ref1 and ref2  in future part of the project 
+ }
  
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 
@@ -153,11 +220,11 @@ while(ptr.available())
 az = (cad_leida.substring(0,cad_leida.indexOf(' '))).toFloat();
 alt = (cad_leida.substring(cad_leida.indexOf(' '))).toFloat(); 
 
-
-
 //conversion a valor entero 
 ref1 =  27000 - (az*100) ; 
 ref2 =  (alt*100) ;  
+
+
 }
 
 
