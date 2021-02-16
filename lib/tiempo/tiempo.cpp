@@ -31,8 +31,8 @@ unsigned int  timer[RELOJES][4]; // vector de relojes
 char timer_activo[RELOJES] = {0, 0, 0, 0, 0, 0, 0, 0};
 char FlagRepEvent[RELOJES] = {88, 88, 88, 88, 88, 88, 88, 88} ;
 
-extern int ref1 ; 
-extern int ref2 ; 
+extern int mover_posicion_az ; 
+extern int mover_posicion_h ; 
 
 
 
@@ -324,7 +324,7 @@ void timerEvent()
     {
       case 1:
             leer_encoders() ; 
-            control_motores(ref1,ref2) ;  
+            control_motores(mover_posicion_az,mover_posicion_h) ;  
             break ;
       case 2:
             break ;

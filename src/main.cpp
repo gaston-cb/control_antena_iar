@@ -31,8 +31,8 @@ String az_dec_pos_actual();
 
 
 
-int ref1 = 9000 ; 
-int ref2 = 9000 ; 
+int mover_posicion_az = 9000 ; 
+int mover_posicion_h = 9000 ; 
 
 EthernetServer stellarium(PORT_STELLARIUM) ;
 unsigned long int RA12HS = 0x80000000  ; // 4bytes  
@@ -136,8 +136,8 @@ void loop()
   }
   cliente_gpr.stop() ; 
   delay(10) ; 
-  ref1 = 9000 ; 
-  ref2 = 9000 ; 
+  mover_posicion_az = 9000 ; 
+  mover_posicion_h= 9000 ; 
  }
   
  if (cliente_s)
@@ -221,8 +221,8 @@ az = (cad_leida.substring(0,cad_leida.indexOf(' '))).toFloat();
 alt = (cad_leida.substring(cad_leida.indexOf(' '))).toFloat(); 
 
 //conversion a valor entero 
-ref1 =  27000 - (az*100) ; 
-ref2 =  (alt*100) ;  
+mover_posicion_az =  27000 - (az*100) ; 
+mover_posicion_h =  (alt*100) ;  
 
 
 }
