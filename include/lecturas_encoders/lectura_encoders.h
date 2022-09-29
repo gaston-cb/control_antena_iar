@@ -1,1 +1,0 @@
-void leer_encoders() ; 

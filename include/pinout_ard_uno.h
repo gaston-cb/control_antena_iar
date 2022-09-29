@@ -9,7 +9,7 @@
 #define MOTOR_2_S2  10 
 
 /* PINES ETHERNET */
-#define PINSS 4
+#define PINSS 10
 #define PINRESET 3  
 
 /* PINES ENCODERS*/
