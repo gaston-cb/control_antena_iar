@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <encoders.h>
+
 #if defined(_cplusplus)
 extern "C" {
 #endif
@@ -28,7 +30,6 @@ uint8_t responseData ;
 void decoderGpredict(char *data_receiver, uint16_t length_buffer){ 
     char *decode_response ; 
     float az, h ; 
-    char first_letter ; 
     Serial.println("data received") ; 
     Serial.println(data_receiver) ;     
     if (data_receiver[0] == COMMAND_GPREDICT_POSITION_READ){
@@ -66,6 +67,7 @@ int8_t responseGpredict(char *buffer_response){
         break;
     case COMMAND_GPREDICT_POSITION_SEND: 
         memcpy(buffer_response,"125.33\r\n33.22\r\n",20)  ;  ///FIXME: CHANGE TO RESPONSE FOR READ LAST POSITION INTO LIBRARY  
+        //VER COMO PARSEAR LOS DATOS DEL ENCODER RECIBIDO 
         response = RESPONSE_GPREDICT ; 
         break ;
     case  COMMAND_GPREDICT_POSITION_STOP: 
@@ -82,8 +84,6 @@ int8_t responseGpredict(char *buffer_response){
         buffer_response = NULL ; 
         break;
     }
-
-
     return response ; 
 }
 
